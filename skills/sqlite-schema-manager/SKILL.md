@@ -13,7 +13,7 @@ Provides four commands for inspecting and evolving the database schema. All dest
 
 **`/db-status`**
 1. Query `schema_version` for current version and `applied_at` timestamp.
-2. Query row counts for all tables: `decisions`, `tasks`, `messages`, `audit_log`, `usage_stats`.
+2. Query row counts for all tables: `decisions`, `tasks`, `messages`, `audit_log`, `usage_stats`, `toggle_history`, `verification_log`, `state`.
 3. Report DB file size (bytes), WAL mode status (`PRAGMA journal_mode`), and last backup timestamp (mtime of `plugin.db.bak` if present).
 4. Count pending migrations (migration files with version > current).
 
@@ -44,9 +44,9 @@ Provides four commands for inspecting and evolving the database schema. All dest
 
 ```
 /db-status
-> Schema version: 2 (applied 2026-04-13)
-> Tables: decisions(0), tasks(0), messages(0), audit_log(0), usage_stats(0)
-> DB size: 32 KB | WAL: enabled | Backup: 2026-04-13 10:22:01
+> Schema version: 4 (applied 2026-04-20)
+> Tables: decisions(0), tasks(0), messages(0), audit_log(0), usage_stats(0), toggle_history(0), verification_log(0), state(1)
+> DB size: 40 KB | WAL: enabled | Backup: 2026-04-20 10:22:01
 > Pending migrations: 0
 
 /sqlite-schema show decisions

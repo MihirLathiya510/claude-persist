@@ -1,73 +1,159 @@
-# tpl-claude-plugin
+# claude-persist
 
-A Claude Code plugin template with agent teams, persistent SQLite memory, MCP-first tooling, context intelligence, and a self-validating structure.
+A Claude Code plugin that acts as a **persistent, self-updating context engine** — transforming Claude from a stateless responder into a state-aware collaborator.
 
-## Built-in Components
+Claude remembers your project, stack, preferences, and current focus across sessions. You stop repeating yourself.
 
-1. **Skills** — core primitive
-   - Location: `skills/<kebab-name>/SKILL.md`
-   - Progressive disclosure: YAML frontmatter (always loaded) → body (on-demand) → references (lazy)
-   - Namespace: `tpl-claude-plugin:<skill-name>`
-   - Active skills: security-auditor, agent-team-orchestrator, computer-use-safety, self-improver, mcp-discovery, plugin-dev, sqlite-init, sqlite-query, sqlite-memory, sqlite-schema-manager, anatomy-indexer, step-verifier, token-ledger
+## How It Works
 
-2. **Agent Teams**
-   - Use for any task touching > 3 files or any refactoring.
-   - Roles in `agents/`: Planner, Coder, Reviewer, Security, Tester.
-   - Trigger: `agent-team-orchestrator` skill or `/orchestrate`.
+```
+Session Start
+    ↓
+sqlite-init → state-updater:load → context-builder:build
+    ↓
+[claude-persist] context block injected before your first prompt
+    ↓
+You work. Claude responds with state awareness.
+    ↓
+state-updater:extract → merge → UPDATE state table
+    ↓
+Next session picks up where you left off.
+```
 
-3. **MCP-First Tooling**
-   - Prefer MCP servers (discovery via `.mcp.json`).
-   - Fallback to Computer Use only when no MCP covers the capability.
+## Core Components
 
-4. **Computer Use**
-   - Always route through `computer-use-safety` skill.
-   - Human confirmation required. 30s timeout. Sandbox recommended.
+### 1. state-updater (`claude-persist:state-updater`)
+- **The sole writer of the `state` table** — no other skill touches it
+- `load`: reads state at session start; seeds defaults if missing
+- `extract`: infers updates from each exchange (project name, stack, focus, preferences)
+- `merge`: applies dot-path patches with size/secret/schema guards
+- Triggers: `on-session-start`, `on-post-response`, `/state-update`, `/state-reset`, `/state-edit`
 
-5. **Hooks**
-   - `hooks/<event>/HOOK.md` for: `file-write`, `commit`, `tool-use`, `session-start`, `step-verification`.
-   - Security-auditor runs automatically on every write and commit.
-   - SQLite audit_log is written on every hook trigger and commit.
+### 2. context-builder (`claude-persist:context-builder`)
+- **Read-only** — only reads `state`, never writes
+- `build`: maps non-empty state fields → minimal ≤10-line context block (≤ 1KB)
+- `inspect`: `/state` command shows formatted block + raw JSON
+- Skips injection entirely when all state fields are empty (no noise)
+- Triggers: `on-session-start`, `on-pre-prompt`, `/state`, `/context-build`
 
-6. **SQLite Memory**
-   - DB at `.claude-plugin/db/plugin.db` (excluded from git).
-   - Schema: decisions, tasks, messages, audit_log, usage_stats, schema_version, verification_log.
-   - FTS5 search on decisions, messages, audit_log.
-   - Migrations in `skills/sqlite-init/migrations/` (V[N]__description.sql).
-   - Reviewer and Security agents are read-only. audit_log is append-only.
+### 3. state table (SQLite, migration V004)
+- Single row: `key = 'global'`, `value = JSON`
+- Cross-session — no `session_id` column (intentional)
+- JSON validated at write time via `json_valid()`
+- Size enforced at skill layer (< 2KB)
 
-7. **Anatomy Indexer**
-   - Runs at session start; builds `.claude-plugin/PROJECT_MAP.json`.
-   - Maps every source file's symbols (functions, classes, exports) with line numbers.
-   - Agents check the map before opening files — eliminates redundant reads.
-   - Refresh manually with `/map`.
+## State Structure
 
-8. **Step-Verification Gate**
-   - Disabled by default. Enable via `stepVerification.enabled` in plugin.json.
-   - Agent calls `/gate <command>` after each step; blocked until test passes.
-   - Logs all results (pass/fail/timing/retries) to `verification_log`.
-   - Configurable: `maxRetries` (default 3), `timeoutMs` (default 30000).
+```json
+{
+  "project": {
+    "name": "",
+    "description": "",
+    "current_focus": "",
+    "stack": []
+  },
+  "user": {
+    "preferences": {
+      "response_style": "",
+      "verbosity": ""
+    }
+  },
+  "session": {
+    "current_task": "",
+    "active_context": []
+  }
+}
+```
 
-9. **Token Ledger**
-   - Run `/usage` or `/burn` to see per-skill token spend for the current session.
-   - Shows: invocations, input/output tokens, cache hit %, error rate, % of session total.
-   - Save a report with `/usage --save`.
+## Context Block (injected before each prompt)
 
-10. **plugin.json**
-    - Source of truth for all capabilities. Keep in sync with files on disk.
-    - Semantic versioning only. Validator enforces this.
+```
+[claude-persist]
+Project: MyApp
+About: SaaS billing platform
+Focus: Subscription webhook handling
+Stack: Node.js, Stripe, Postgres
+Style: concise
+Task: Debug failed webhook retry logic
+---
+```
+
+Empty fields are skipped. Empty state = no injection.
+
+## Commands
+
+| Command | Action |
+|---------|--------|
+| `/state` | View current state (formatted block + raw JSON) |
+| `/state-reset` | Clear state back to defaults (with confirmation) |
+| `/state-edit <json-patch>` | Manually update state with dot-path patch |
+| `/context-build` | Force regenerate and display context block |
+| `/sq select * from state` | Inspect raw DB row |
+
+## Session-Start Execution Order
+
+1. Parse `plugin.json`
+2. Warm skill frontmatter index
+3. Run `mcp-discovery`
+4. Log install profile
+5. `sqlite-init` — DB init + run pending migrations (including V004)
+6. **`state-updater:load`** — load or seed global state ← new
+7. **`context-builder:build`** — inject context block if non-empty ← new
+8. `anatomy-indexer` — build PROJECT_MAP.json
+
+## Inherited Components (from template)
+
+| Skill | Purpose |
+|-------|---------|
+| `security-auditor` | Scans every write and commit for secrets |
+| `agent-team-orchestrator` | Spawns agent teams for complex tasks (`/orchestrate`) |
+| `sqlite-memory` | Typed agent memory — decisions, tasks, messages |
+| `sqlite-query` | Natural language → validated SQL → JSON (`/sq`) |
+| `sqlite-schema-manager` | Migrations and DB health (`/migrate`, `/db-status`) |
+| `anatomy-indexer` | File/symbol index at session start (`/map`) |
+| `step-verifier` | Test gate between agent steps (`/gate`) |
+| `token-ledger` | Per-skill token spend report (`/usage`) |
+| `mcp-discovery` | MCP server detection at session start |
+| `computer-use-safety` | Human-gated Computer Use |
+| `plugin-dev` | Scaffold new skills (`/create-micro-skill`) |
+| `self-improver` | Plugin self-refactor (`/self-improve`) |
+
+## Guards and Constraints
+
+| Constraint | Limit |
+|-----------|-------|
+| State JSON size | < 2048 bytes |
+| Context block size | < 1024 bytes (≤ 10 lines) |
+| State writers | `state-updater` only |
+| Allowed state roots | `project`, `user`, `session` only |
+| Sensitive data | Rejected at merge time (same patterns as security-auditor) |
+| Context token budget | < 8k tokens/session |
 
 ## Decision Tree
 
-- 1 file change → single Skill
-- 3+ files or refactor → `/orchestrate` (Agent Team)
-- External tool needed → MCP first, Computer Use as fallback
-- Any write or commit → security-auditor runs automatically
-- Plugin needs improvement → `/self-improve`
-- Add a skill → `/plugin-dev:create-micro-skill`
-- Check DB health → `/db-status`
-- Refresh file index → `/map`
-- Verify a step → `/gate <test-command>`
-- Check token spend → `/usage`
+```
+1 file change           →  single skill
+3+ files or refactor    →  /orchestrate (agent team)
+Need external tool      →  MCP first, Computer Use fallback
+Any write or commit     →  security-auditor auto-runs
+View persisted context  →  /state
+Clear context           →  /state-reset
+Manually set context    →  /state-edit
+Refresh file index      →  /map
+Verify agent step       →  /gate <test-command>
+Check token spend       →  /usage
+Check DB health         →  /db-status
+```
+
+## SQLite Schema
+
+```
+decisions       tasks           messages        audit_log
+usage_stats     schema_version  toggle_history  verification_log
+state           decisions_fts   messages_fts    audit_log_fts
+```
+
+DB at `.claude-plugin/db/plugin.db` (git-excluded). Migrations in `skills/sqlite-init/migrations/`.
 
 ## Constraints
 
@@ -75,7 +161,7 @@ A Claude Code plugin template with agent teams, persistent SQLite memory, MCP-fi
 - Computer Use always has human-in-the-loop.
 - `tests/plugin-validator` must pass before any release.
 - Skill frontmatter is always loaded; never put heavy context there.
-- Context budget: < 8k tokens per session.
+- `state` table has one writer: `claude-persist:state-updater`.
 - `stepVerification` is opt-in — enable per project in plugin.json.
 
 ## Compatibility

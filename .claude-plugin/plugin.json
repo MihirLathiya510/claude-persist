@@ -1,9 +1,11 @@
 {
-  "name": "tpl-claude-plugin",
-  "version": "1.2.0",
-  "description": "Gold-standard 2026 Claude Code plugin template",
-  "namespace": "tpl-claude-plugin",
-  "minClaudeVersion": "claude-opus-4-6",
+  "name": "claude-persist",
+  "version": "1.3.0",
+  "description": "Persistent, self-updating context engine for Claude — stores project and user state across sessions and injects minimal context before each prompt",
+  "skills": "skills",
+  "agents": "agents",
+  "namespace": "claude-persist",
+  "minClaudeVersion": "claude-sonnet-4-6",
   "capabilities": {
     "skills": [
       "security-auditor",
@@ -18,7 +20,9 @@
       "sqlite-schema-manager",
       "anatomy-indexer",
       "step-verifier",
-      "token-ledger"
+      "token-ledger",
+      "state-updater",
+      "context-builder"
     ],
     "hooks": ["file-write", "commit", "tool-use", "session-start", "step-verification"],
     "agents": ["planner", "coder", "reviewer", "security", "tester"],
@@ -27,7 +31,7 @@
   },
   "installProfiles": {
     "minimal": ["security-auditor", "mcp-discovery"],
-    "standard": ["security-auditor", "agent-team-orchestrator", "mcp-discovery", "plugin-dev"],
+    "standard": ["security-auditor", "agent-team-orchestrator", "mcp-discovery", "plugin-dev", "state-updater", "context-builder"],
     "full": ["*"]
   },
   "mcpDependencies": [],

@@ -1,0 +1,24 @@
+{
+  "name": "claude-persist",
+  "owner": {
+    "name": "Mihir Lathiya",
+    "email": "mihirlathiya2@gmail.com"
+  },
+  "metadata": {
+    "description": "Persistent, self-updating context engine — Claude remembers your project, stack, and preferences across sessions"
+  },
+  "plugins": [
+    {
+      "name": "claude-persist",
+      "source": "./",
+      "description": "Stores project and user state in SQLite and injects minimal context before each prompt. Claude stops being stateless.",
+      "version": "1.3.0",
+      "author": {
+        "name": "Mihir Lathiya",
+        "email": "mihirlathiya2@gmail.com"
+      },
+      "category": "productivity",
+      "tags": ["context", "memory", "state", "persistence", "sqlite"]
+    }
+  ]
+}

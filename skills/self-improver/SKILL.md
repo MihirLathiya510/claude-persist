@@ -7,7 +7,7 @@ namespace: tpl-claude-plugin:self-improver
 
 ## Usage
 
-Triggered when the user requests improvements to the plugin template itself. Spawns an agent team via `agent-team-orchestrator` and routes all changes through the normal hook pipeline.
+Triggered when the user requests improvements to the claude-persist plugin. Spawns an agent team via `agent-team-orchestrator` and routes all changes through the normal hook pipeline.
 
 ## Steps
 
@@ -31,7 +31,7 @@ Triggered when the user requests improvements to the plugin template itself. Spa
 
 ## Constraints
 
-- Never modify `CLAUDE.md` without explicit user instruction.
+- Never modify `claude.md` without explicit user instruction.
 - Never auto-increment version; always require confirmation.
 - Self-improvement changes go through the full review pipeline — no shortcuts.
 

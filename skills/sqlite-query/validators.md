@@ -37,6 +37,7 @@ verification_log
 decisions_fts
 messages_fts
 audit_log_fts
+state
 ```
 
 Any other table reference → reject with "Unknown table: <name>".

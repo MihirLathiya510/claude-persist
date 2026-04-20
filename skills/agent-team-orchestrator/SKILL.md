@@ -22,13 +22,14 @@ Trigger this skill when ANY of:
 ## Steps
 
 1. Assess task scope (file count, refactor vs. new, external dependencies).
-2. Select relevant agents from `agents/` based on task type.
-3. Planner produces sequenced task list and distributes via shared channel.
+2. Check session state for `active_context` injected by `claude-persist:context-builder`. Use `project.name`, `project.stack`, `project.current_focus`, and `session.current_task` to inform task scope, agent assignments, and avoid redundant context-gathering from the user.
+3. Select relevant agents from `agents/` based on task type.
+4. Planner produces sequenced task list and distributes via shared channel.
 4. Coder implements tasks; Reviewer approves each before proceeding.
-5. Security agent runs in parallel on any sensitive file changes.
-6. Tester runs `tests/plugin-validator` after all Coder tasks complete.
-7. Collect and synthesize outputs; surface final result to user.
-8. Orchestration is complete only when Tester reports `DONE: all checks passed`.
+6. Security agent runs in parallel on any sensitive file changes.
+7. Tester runs `tests/plugin-validator` after all Coder tasks complete.
+8. Collect and synthesize outputs; surface final result to user.
+9. Orchestration is complete only when Tester reports `DONE: all checks passed`.
 
 ## Examples
 
@@ -47,3 +48,4 @@ Trigger this skill when ANY of:
 - `agents/reviewer.md`
 - `agents/security.md`
 - `agents/tester.md`
+- `claude-persist:context-builder`

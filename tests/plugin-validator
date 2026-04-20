@@ -58,15 +58,14 @@ for skill in $SKILLS; do
   done
 done
 
-# ── 5. namespace matches tpl-claude-plugin:<dir-name> ─────────────────────────
+# ── 5. namespace ends with :<dir-name> (prefix may vary by plugin) ────────────
 for skill in $SKILLS; do
   skill_file="$ROOT/skills/$skill/SKILL.md"
   [[ -f "$skill_file" ]] || continue
-  expected="namespace: tpl-claude-plugin:$skill"
-  if grep -q "^$expected" "$skill_file"; then
+  if grep -qE "^namespace: [^:]+:$skill$" "$skill_file"; then
     pass "skills/$skill/SKILL.md namespace is correct"
   else
-    fail "skills/$skill/SKILL.md namespace mismatch (expected: $expected)"
+    fail "skills/$skill/SKILL.md namespace mismatch (expected pattern: <prefix>:$skill)"
   fi
 done
 

@@ -31,10 +31,10 @@ All other sqlite skills gate on `sqlite.enabled` in plugin.json. If disabled, th
 
 ```
 [session-start] Invoking tpl-claude-plugin:sqlite-init...
-> SQLite initialized at .claude-plugin/db/plugin.db, schema version 2.
+> SQLite initialized at .claude-plugin/db/plugin.db, schema version 4.
 
 /sqlite-init
-> Already initialized. Schema version 2. No pending migrations.
+> Already initialized. Schema version 4. No pending migrations.
 
 /sqlite-reset
 > Type CONFIRM to reset the database. All data will be lost.
