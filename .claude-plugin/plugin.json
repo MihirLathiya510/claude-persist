@@ -1,0 +1,46 @@
+{
+  "name": "tpl-claude-plugin",
+  "version": "1.2.0",
+  "description": "Gold-standard 2026 Claude Code plugin template",
+  "namespace": "tpl-claude-plugin",
+  "minClaudeVersion": "claude-opus-4-6",
+  "capabilities": {
+    "skills": [
+      "security-auditor",
+      "agent-team-orchestrator",
+      "computer-use-safety",
+      "self-improver",
+      "mcp-discovery",
+      "plugin-dev",
+      "sqlite-init",
+      "sqlite-query",
+      "sqlite-memory",
+      "sqlite-schema-manager",
+      "anatomy-indexer",
+      "step-verifier",
+      "token-ledger"
+    ],
+    "hooks": ["file-write", "commit", "tool-use", "session-start", "step-verification"],
+    "agents": ["planner", "coder", "reviewer", "security", "tester"],
+    "mcp": true,
+    "computerUse": true
+  },
+  "installProfiles": {
+    "minimal": ["security-auditor", "mcp-discovery"],
+    "standard": ["security-auditor", "agent-team-orchestrator", "mcp-discovery", "plugin-dev"],
+    "full": ["*"]
+  },
+  "mcpDependencies": [],
+  "sqlite": {
+    "enabled": true,
+    "dbPath": ".claude-plugin/db/plugin.db",
+    "rowLimit": 100,
+    "queryCache": true,
+    "readOnlyAgents": ["reviewer", "security"]
+  },
+  "stepVerification": {
+    "enabled": false,
+    "maxRetries": 3,
+    "timeoutMs": 30000
+  }
+}

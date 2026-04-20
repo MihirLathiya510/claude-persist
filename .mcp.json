@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "servers": [],
+  "discovery": {
+    "auto": true,
+    "scanPaths": [".mcp.json", "~/.claude/mcp.json"],
+    "fallback": "computer-use"
+  }
+}

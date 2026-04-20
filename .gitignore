@@ -1,0 +1,11 @@
+# SQLite database files — never commit the live DB
+.claude-plugin/db/
+
+# Pre-migration backup
+.claude-plugin/db/*.bak
+
+# Anatomy indexer output — generated at session start
+.claude-plugin/PROJECT_MAP.json
+
+# Token ledger reports — generated on demand
+.claude-plugin/token-ledger-*.md
