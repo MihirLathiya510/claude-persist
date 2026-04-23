@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- outer ring — lightest -->
+  <ellipse cx="64" cy="80" rx="40" ry="20" stroke="#A5B4FC" stroke-width="3"/>
+  <!-- mid ring -->
+  <ellipse cx="64" cy="64" rx="32" ry="16" stroke="#6366F1" stroke-width="2.5"/>
+  <!-- inner ring -->
+  <ellipse cx="64" cy="52" rx="24" ry="12" stroke="#4F46E5" stroke-width="2"/>
+  <!-- solid cap — richest -->
+  <ellipse cx="64" cy="44" rx="16" ry="8" fill="#4338CA"/>
+</svg>

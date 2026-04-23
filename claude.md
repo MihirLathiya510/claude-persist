@@ -1,8 +1,8 @@
 # claude-persist
 
-A Claude Code plugin that acts as a **persistent, self-updating context engine** — transforming Claude from a stateless responder into a state-aware collaborator.
+A Claude Code plugin that acts as a **persistent context engine** — Claude remembers your project, stack, preferences, and current task across sessions. You stop repeating yourself.
 
-Claude remembers your project, stack, preferences, and current focus across sessions. You stop repeating yourself.
+---
 
 ## How It Works
 
@@ -13,34 +13,38 @@ sqlite-init → state-updater:load → context-builder:build
     ↓
 [claude-persist] context block injected before your first prompt
     ↓
-You work. Claude responds with state awareness.
+You work. Claude responds with full project awareness.
     ↓
 state-updater:extract → merge → UPDATE state table
     ↓
 Next session picks up where you left off.
 ```
 
-## Core Components
+---
 
-### 1. state-updater (`claude-persist:state-updater`)
-- **The sole writer of the `state` table** — no other skill touches it
-- `load`: reads state at session start; seeds defaults if missing
-- `extract`: infers updates from each exchange (project name, stack, focus, preferences)
-- `merge`: applies dot-path patches with size/secret/schema guards
-- Triggers: `on-session-start`, `on-post-response`, `/state-update`, `/state-reset`, `/state-edit`
+## Core Skills
 
-### 2. context-builder (`claude-persist:context-builder`)
-- **Read-only** — only reads `state`, never writes
-- `build`: maps non-empty state fields → minimal ≤10-line context block (≤ 1KB)
-- `inspect`: `/state` command shows formatted block + raw JSON
-- Skips injection entirely when all state fields are empty (no noise)
-- Triggers: `on-session-start`, `on-pre-prompt`, `/state`, `/context-build`
+### state-updater
+- **Sole writer of the `state` table** — no other skill touches it
+- `load` — reads state at session start; seeds defaults if the row is missing
+- `extract` — infers updates from each exchange (name, stack, focus, preferences)
+- `merge` — applies dot-path patches with size / secret / root-key / no-op guards
+- Commands: `/state-update`, `/state-reset`, `/state-edit`
 
-### 3. state table (SQLite, migration V004)
+### context-builder
+- **Read-only** — reads `state`, never writes
+- `build` — maps non-empty state fields to a ≤10-line block (≤ 1KB); skips empty fields
+- `inspect` — `/state` shows the formatted block + raw JSON
+- Skips injection entirely when all state fields are empty (no noise on fresh install)
+- Commands: `/state`, `/context-build`
+
+### state table (SQLite — migration V004)
 - Single row: `key = 'global'`, `value = JSON`
 - Cross-session — no `session_id` column (intentional)
-- JSON validated at write time via `json_valid()`
-- Size enforced at skill layer (< 2KB)
+- JSON validated at DB level via `CHECK (json_valid(value))`
+- Size limit enforced at skill layer (< 2048 bytes)
+
+---
 
 ## State Structure
 
@@ -65,7 +69,9 @@ Next session picks up where you left off.
 }
 ```
 
-## Context Block (injected before each prompt)
+---
+
+## Context Block Format
 
 ```
 [claude-persist]
@@ -78,56 +84,23 @@ Task: Debug failed webhook retry logic
 ---
 ```
 
-Empty fields are skipped. Empty state = no injection.
+Rules: empty / whitespace-only fields are skipped. Empty state = no injection.
 
-## Commands
-
-| Command | Action |
-|---------|--------|
-| `/state` | View current state (formatted block + raw JSON) |
-| `/state-reset` | Clear state back to defaults (with confirmation) |
-| `/state-edit <json-patch>` | Manually update state with dot-path patch |
-| `/context-build` | Force regenerate and display context block |
-| `/sq select * from state` | Inspect raw DB row |
+---
 
 ## Session-Start Execution Order
 
-1. Parse `plugin.json`
-2. Warm skill frontmatter index
-3. Run `mcp-discovery`
-4. Log install profile
-5. `sqlite-init` — DB init + run pending migrations (including V004)
-6. **`state-updater:load`** — load or seed global state ← new
-7. **`context-builder:build`** — inject context block if non-empty ← new
-8. `anatomy-indexer` — build PROJECT_MAP.json
+1. Parse and validate `.claude-plugin/plugin.json`
+2. Warm skill frontmatter index (read YAML only from each `SKILL.md`)
+3. Run `mcp-discovery` — detect available MCP servers
+4. Run `sqlite-init` — initialize DB and apply any pending migrations
+5. Run `state-updater:load` — read or seed global state row
+6. Run `context-builder:build` — inject context block if any field is non-empty
+7. Run `anatomy-indexer` — build `PROJECT_MAP.json` (skip if < 1 hour old)
 
-## Inherited Components (from template)
+Each step degrades gracefully on failure — session always starts.
 
-| Skill | Purpose |
-|-------|---------|
-| `security-auditor` | Scans every write and commit for secrets |
-| `agent-team-orchestrator` | Spawns agent teams for complex tasks (`/orchestrate`) |
-| `sqlite-memory` | Typed agent memory — decisions, tasks, messages |
-| `sqlite-query` | Natural language → validated SQL → JSON (`/sq`) |
-| `sqlite-schema-manager` | Migrations and DB health (`/migrate`, `/db-status`) |
-| `anatomy-indexer` | File/symbol index at session start (`/map`) |
-| `step-verifier` | Test gate between agent steps (`/gate`) |
-| `token-ledger` | Per-skill token spend report (`/usage`) |
-| `mcp-discovery` | MCP server detection at session start |
-| `computer-use-safety` | Human-gated Computer Use |
-| `plugin-dev` | Scaffold new skills (`/create-micro-skill`) |
-| `self-improver` | Plugin self-refactor (`/self-improve`) |
-
-## Guards and Constraints
-
-| Constraint | Limit |
-|-----------|-------|
-| State JSON size | < 2048 bytes |
-| Context block size | < 1024 bytes (≤ 10 lines) |
-| State writers | `state-updater` only |
-| Allowed state roots | `project`, `user`, `session` only |
-| Sensitive data | Rejected at merge time (same patterns as security-auditor) |
-| Context token budget | < 8k tokens/session |
+---
 
 ## Decision Tree
 
@@ -145,6 +118,45 @@ Check token spend       →  /usage
 Check DB health         →  /db-status
 ```
 
+---
+
+## All Skills
+
+| Skill | Command(s) | Purpose |
+|---|---|---|
+| `state-updater` | `/state-reset` `/state-edit` | Sole writer of global state |
+| `context-builder` | `/state` `/context-build` | Builds and injects context block |
+| `sqlite-init` | `/sqlite-init` `/sqlite-reset` | DB init and migrations |
+| `sqlite-query` | `/sq` | Natural language → validated SQL |
+| `sqlite-memory` | `/remember` `/recall` | Typed agent memory (no raw SQL) |
+| `sqlite-schema-manager` | `/migrate` `/db-status` | Schema versioning and health |
+| `security-auditor` | `/security-audit` | Scans every write and commit for secrets |
+| `agent-team-orchestrator` | `/orchestrate` | Planner → Coder → Reviewer pipeline |
+| `anatomy-indexer` | `/map` | File and symbol index at session start |
+| `step-verifier` | `/gate` | Test gate between agent steps |
+| `token-ledger` | `/usage` | Per-skill token spend report |
+| `mcp-discovery` | — | MCP server detection at session start |
+| `computer-use-safety` | — | Human-gated Computer Use |
+| `plugin-dev` | `/create-micro-skill` | Scaffold new skills |
+| `self-improver` | `/self-improve` | Plugin self-refactor pipeline |
+
+---
+
+## Guards and Limits
+
+| Guard | Rule |
+|---|---|
+| State size | Merge rejected if result > 2048 bytes |
+| Context block | Iterative line-drop until ≤ 1024 bytes |
+| State writers | `state-updater` only — enforced by convention |
+| Allowed state roots | `project`, `user`, `session` only |
+| Sensitive data | Rejected at merge time (API keys, tokens, passwords, private keys) |
+| Whitespace values | Stripped before empty check — whitespace-only treated as empty |
+| SQL queries | 10 forbidden patterns, 12-table allowlist, LIMIT 100 injected, capped at 500 |
+| Read-only agents | `reviewer`, `security` — SELECT only via `sqlite-query` |
+
+---
+
 ## SQLite Schema
 
 ```
@@ -153,19 +165,52 @@ usage_stats     schema_version  toggle_history  verification_log
 state           decisions_fts   messages_fts    audit_log_fts
 ```
 
-DB at `.claude-plugin/db/plugin.db` (git-excluded). Migrations in `skills/sqlite-init/migrations/`.
+DB: `.claude-plugin/db/plugin.db` (gitignored)
+Migrations: `skills/sqlite-init/migrations/` (V001–V004)
 
-## Constraints
+---
 
-- Every write/commit triggers security-auditor. No exceptions.
-- Computer Use always has human-in-the-loop.
-- `tests/plugin-validator` must pass before any release.
-- Skill frontmatter is always loaded; never put heavy context there.
-- `state` table has one writer: `claude-persist:state-updater`.
-- `stepVerification` is opt-in — enable per project in plugin.json.
+## Hooks
 
-## Compatibility
+| Hook | Fires on | What it does |
+|---|---|---|
+| `session-start` | Every session open | Runs the 7-step init sequence above |
+| `file-write` | Every Write/Edit tool call | Scans content for secrets before persisting |
+| `commit` | Every git commit | Security audit + plugin-validator gate |
+| `tool-use` | Every tool call | Routes Computer Use through human confirmation |
+| `step-verification` | `/gate` or `on-step-complete` | Blocks agent until test command passes |
 
-- Claude Sonnet 4.6 / Opus 4.6+
-- VS Code extension, CLI, Cowork
-- SQLite 3.38+ (JSON1 + FTS5 built-in)
+---
+
+## Agents
+
+| Agent | Role |
+|---|---|
+| `planner` | Breaks intent into sequenced tasks, assigns to team |
+| `coder` | Implements tasks; all writes trigger file-write hook |
+| `reviewer` | Reviews Coder output; read-only DB access |
+| `security` | Deep security review on sensitive changes; veto power |
+| `tester` | Runs `tests/plugin-validator`; blocks release on failure |
+
+---
+
+## Test Suite
+
+```bash
+python3 tests/integration-tests.py   # 276 tests — schema, guards, patterns, structure
+python3 tests/user-flow-tests.py     # 106 tests — end-to-end user scenarios
+bash tests/plugin-validator          # structural completeness check
+```
+
+All three must pass before any release.
+
+---
+
+## Extending State
+
+To add a new remembered field:
+
+1. Add it to the default JSON seed in `skills/sqlite-init/migrations/V004__add_state_table.sql`
+   (or create `V005` for existing installs)
+2. Add an extraction rule in `skills/state-updater/SKILL.md` → `extract` section
+3. Add a render mapping in `skills/context-builder/SKILL.md` → field table
