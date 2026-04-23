@@ -12,8 +12,7 @@ Any git commit operation, including amended commits.
 1. Invoke `tpl-claude-plugin:security-auditor` on all staged files.
 2. If any changed files are under `skills/`, `agents/`, or `.claude-plugin/`, run `tests/plugin-validator`.
 3. Collect full violation report and validator output.
-4. If `stepVerification.enabled` is `true` in plugin.json, invoke `tpl-claude-plugin:step-verifier` on the staged changes as a final gate before committing. Block commit if verification fails.
-5. On successful commit: INSERT into `audit_log` via `tpl-claude-plugin:sqlite-query` with `event_type='commit'`, `target=<commit hash>`, `detail=<first line of commit message>`, `severity='info'`.
+4. On successful commit: INSERT into `audit_log` via `tpl-claude-plugin:sqlite-query` with `event_type='commit'`, `target=<commit hash>`, `detail=<first line of commit message>`, `severity='info'`.
 
 ## Enforcement
 

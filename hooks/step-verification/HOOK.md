@@ -8,9 +8,6 @@ description: Gates agent progression — blocks the next step until a test comma
 Fires when:
 - An agent signals step completion (`on-step-complete` event)
 - A user or agent explicitly calls `/gate` or `/verify-step`
-- `stepVerification.enabled` is `true` in plugin.json (disabled by default)
-
-Does nothing if `stepVerification.enabled` is `false`.
 
 ## Actions
 
@@ -28,5 +25,4 @@ Does nothing if `stepVerification.enabled` is `false`.
 - **Fail (retries remain)** → agent blocked; show output; prompt fix and retry.
 - **Fail (retries exhausted)** → agent fully blocked; Planner notified; user must intervene or override with `/gate --skip`.
 - **Timeout** → critical log to `audit_log`; agent halted; requires user acknowledgment before session continues.
-- **Hook disabled** (`stepVerification.enabled=false`) → pass-through; no action taken; no log entry.
-- Never block when `stepVerification.enabled` is `false` — this is an opt-in feature.
+- This hook is opt-in — it only fires when explicitly called via `/gate` or `on-step-complete`.
