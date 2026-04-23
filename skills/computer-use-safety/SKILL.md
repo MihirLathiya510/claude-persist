@@ -1,8 +1,6 @@
 ---
 name: computer-use-safety
 description: Gates all Computer Use tool calls behind human confirmation; executes in sandbox
-triggers: [on-computer-use, /computer-use, screenshot, browser-action]
-namespace: tpl-claude-plugin:computer-use-safety
 ---
 
 ## Usage

@@ -1,8 +1,6 @@
 ---
 name: sqlite-query
 description: Translates natural language to validated SQL, executes against plugin.db, returns structured JSON results
-triggers: [/sqlite-query, /sq, on-data-request]
-namespace: tpl-claude-plugin:sqlite-query
 ---
 
 ## Usage
@@ -13,16 +11,15 @@ Never exposes raw SQL errors to agents — always returns the structured error f
 
 ## Steps
 
-1. Check `sqlite.enabled` in plugin.json. If `false`, return `{ "error": "SQLite disabled", "rows": [], "row_count": 0 }`.
-2. Accept query string. If natural language, generate candidate SQL (SELECT or INSERT/UPDATE as appropriate).
-3. Validate against forbidden patterns in `validators.md` (lazy-loaded). Reject immediately on any match.
-4. Classify: starts with SELECT (or WITH...SELECT) → read path. Otherwise → write path.
-5. **Write path:** check caller agent is not in `sqlite.readOnlyAgents`. If violation, log to `audit_log` and reject.
-6. **Read path:** normalize SQL (lowercase + collapse whitespace). Check session cache. If hit, return cached result with `"cached": true`. Bypass cache if query contains time functions.
-7. Inject `LIMIT 100` if absent on SELECT; clamp to 500 if exceeded.
-8. Check table allowlist — reject unknown tables.
-9. Execute with parameterized statement. On `SQLITE_BUSY`, retry per policy in `validators.md`.
-10. Store result in session cache (read path only). Return structured JSON.
+1. Accept query string. If natural language, generate candidate SQL (SELECT or INSERT/UPDATE as appropriate).
+2. Validate against forbidden patterns in `validators.md` (lazy-loaded). Reject immediately on any match.
+3. Classify: starts with SELECT (or WITH...SELECT) → read path. Otherwise → write path.
+4. **Write path:** check caller agent is not in the read-only agents list (`reviewer`, `security`). If violation, log to `audit_log` and reject.
+5. **Read path:** normalize SQL (lowercase + collapse whitespace). Check session cache. If hit, return cached result with `"cached": true`. Bypass cache if query contains time functions.
+6. Inject `LIMIT 100` if absent on SELECT; clamp to 500 if exceeded.
+7. Check table allowlist — reject unknown tables.
+8. Execute with parameterized statement. On `SQLITE_BUSY`, retry per policy in `validators.md`.
+9. Store result in session cache (read path only). Return structured JSON.
 
 ## Output Format
 

@@ -1,8 +1,6 @@
 ---
 name: security-auditor
 description: Scans files for secrets and security violations; runs on every write and commit
-triggers: [on-file-write, on-commit, /security-audit]
-namespace: tpl-claude-plugin:security-auditor
 ---
 
 ## Usage
@@ -18,7 +16,7 @@ Accepts a list of file paths and their staged content. Returns a structured viol
    - API keys: `[Aa][Pp][Ii][-_]?[Kk][Ee][Yy]\s*[:=]\s*\S+`
    - Tokens: `[Tt][Oo][Kk][Ee][Nn]\s*[:=]\s*[A-Za-z0-9+/]{20,}`
    - Private keys: `-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----`
-   - Passwords: `[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]\s*[:=]\s*\S{8,}`
+   - Passwords: `[Pp][Aa][Ss][Ss]([Ww][Oo][Rr][Dd]|[Ww][Dd])\s*[:=]\s*\S{8,}`
 3. Check that no `.env` files with literal secrets are being written.
 4. Verify hook registry: confirm `file-write` and `commit` hooks are present on disk.
 5. Return violation report with severity for each finding.

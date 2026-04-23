@@ -1,8 +1,6 @@
 ---
 name: plugin-dev
 description: Developer tooling for creating new micro-skills and extending the plugin
-triggers: [/plugin-dev, /create-micro-skill, /new-skill]
-namespace: tpl-claude-plugin:plugin-dev
 ---
 
 ## Usage
@@ -20,7 +18,7 @@ Scaffolds a new micro-skill with correct frontmatter, registers it in `plugin.js
 2. Validate name is kebab-case; reject if not.
 3. Auto-construct namespace: `claude-persist:<skill-name>`.
 4. Scaffold `skills/<skill-name>/SKILL.md` with frontmatter only (body left empty for the developer to fill in).
-5. Append the new skill name to `capabilities.skills` in `.claude-plugin/plugin.json`.
+5. Verify `skills/<skill-name>/SKILL.md` was written correctly (frontmatter present, no extra keys).
 6. Invoke `tpl-claude-plugin:security-auditor` on the two written files.
 7. Run `tests/plugin-validator`; surface any failures before reporting success.
 
@@ -30,8 +28,6 @@ Scaffolds a new micro-skill with correct frontmatter, registers it in `plugin.js
 ---
 name: <skill-name>
 description: <description>
-triggers: [<triggers>]
-namespace: claude-persist:<skill-name>
 ---
 
 ## Usage

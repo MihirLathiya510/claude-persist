@@ -1,8 +1,6 @@
 ---
 name: token-ledger
 description: Renders a per-session token usage report from usage_stats — shows spend per skill with cache hit rate and error rate
-triggers: [/token-ledger, /usage, /burn]
-namespace: tpl-claude-plugin:token-ledger
 ---
 
 ## Usage
@@ -48,7 +46,7 @@ Reads from `usage_stats` via `tpl-claude-plugin:sqlite-query`. Read-only — no 
    - Most expensive skill (by total tokens)
    - Best cache hit rate (skill with highest %)
    - Any skills with error rate > 10% (flag these)
-   - Estimated session budget remaining (if `sqlite.tokenBudget` set in plugin.json)
+   - Estimated session budget remaining (if user has set a budget via `/usage --budget N`)
 6. Optionally write full report to `.claude-plugin/token-ledger-<session_id>.md` if user passes `--save` flag.
 
 ## Decision Rule

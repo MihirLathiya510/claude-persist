@@ -1,8 +1,6 @@
 ---
 name: self-improver
 description: Lets the plugin refactor itself using the agent team pipeline with full hook enforcement
-triggers: [/self-improve, /refactor-plugin, on-plugin-improvement-request]
-namespace: tpl-claude-plugin:self-improver
 ---
 
 ## Usage

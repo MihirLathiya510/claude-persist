@@ -44,7 +44,7 @@ Any other table reference → reject with "Unknown table: <name>".
 
 ## Read-Only Agent Enforcement
 
-Agents in `sqlite.readOnlyAgents` (default: `["reviewer", "security"]`) may only execute SELECT statements.
+Agents `reviewer` and `security` may only execute SELECT statements.
 Any write attempt from these agents → INSERT into `audit_log` with `event_type='security-violation'`, `severity='warning'`, then reject the query.
 
 ## LIMIT Injection Rules

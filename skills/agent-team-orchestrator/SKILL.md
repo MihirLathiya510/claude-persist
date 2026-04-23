@@ -1,8 +1,6 @@
 ---
 name: agent-team-orchestrator
 description: Spawns and coordinates agent teams for complex multi-file tasks
-triggers: [/orchestrate, on-complex-task, on-multi-file-change]
-namespace: tpl-claude-plugin:agent-team-orchestrator
 ---
 
 ## Usage
@@ -25,7 +23,7 @@ Trigger this skill when ANY of:
 2. Check session state for `active_context` injected by `claude-persist:context-builder`. Use `project.name`, `project.stack`, `project.current_focus`, and `session.current_task` to inform task scope, agent assignments, and avoid redundant context-gathering from the user.
 3. Select relevant agents from `agents/` based on task type.
 4. Planner produces sequenced task list and distributes via shared channel.
-4. Coder implements tasks; Reviewer approves each before proceeding.
+5. Coder implements tasks; Reviewer approves each before proceeding.
 6. Security agent runs in parallel on any sensitive file changes.
 7. Tester runs `tests/plugin-validator` after all Coder tasks complete.
 8. Collect and synthesize outputs; surface final result to user.

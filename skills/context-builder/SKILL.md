@@ -1,8 +1,6 @@
 ---
 name: context-builder
 description: Reads global state and emits a minimal ≤10-line human-readable context block for injection before each prompt; handles /state inspection commands
-triggers: [on-session-start, on-pre-prompt, /state, /context-build]
-namespace: claude-persist:context-builder
 ---
 
 ## Usage
@@ -11,14 +9,14 @@ Generates the minimal context block that gets injected before every user prompt.
 
 Invoked at session start to produce the initial context, and before each prompt to keep context current. Also handles the `/state` command for user inspection.
 
-If `sqlite.enabled` is false, returns empty string (no injection).
+Returns empty string (no injection) if the state row is missing or all fields are empty.
 
 ## Steps
 
 **`build` (on-session-start, on-pre-prompt)**
 1. `SELECT value FROM state WHERE key = 'global'` — load current state JSON.
 2. If no row found, return empty string. Do not error.
-3. Map non-empty fields to labeled lines (skip any field that is `""` or `[]`):
+3. Map non-empty fields to labeled lines (skip any field that is `""`, whitespace-only after strip, or `[]`):
 
    | State path | Output line |
    |-----------|-------------|
@@ -39,7 +37,7 @@ If `sqlite.enabled` is false, returns empty string (no injection).
    ...
    ---
    ```
-6. Size check: if output > 1024 bytes, truncate to first 10 lines + separator. Log warning.
+6. Size check: if output > 1024 bytes, iteratively drop the last line until the block is ≤ 1024 bytes. Log warning with count of dropped lines. If even a single line exceeds 1024 bytes, truncate that line's value to fit.
 7. Return context block for injection into session state as `active_context`.
 
 **`inspect` (/state)**
@@ -90,7 +88,7 @@ Empty state (no injection, no noise):
 - Max 10 content lines (between header and separator)
 - No raw JSON in the injected block
 - No session history, no logs, no audit data
-- Skip any field that is empty string or empty array
+- Skip any field that is empty string, whitespace-only, or empty array
 - Total output ≤ 1024 bytes before injection
 - Read-only: never writes to any table
 

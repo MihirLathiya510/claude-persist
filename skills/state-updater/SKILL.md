@@ -1,8 +1,6 @@
 ---
 name: state-updater
 description: Extracts meaningful updates from each exchange and merges them into persistent global state via dot-path patching — the sole writer of the state table
-triggers: [on-session-start, on-post-response, /state-update, /state-reset, /state-edit]
-namespace: claude-persist:state-updater
 ---
 
 ## Usage
@@ -43,7 +41,7 @@ If `sqlite.enabled` is false, all operations return `null` and log a note to ses
    - **Root key guard**: reject any key not in `["project", "user", "session"]`. Log and skip the offending key.
    - **Size guard**: `length(json(merged)) > 2048` → reject entire merge, log "Merge rejected: state would exceed 2KB."
    - **Secret guard**: value matches any secret pattern (API key, token, password, private key) → reject that key, log warning.
-   - **No-op guard**: value is empty string, empty array, or identical to current → skip that key silently.
+   - **No-op guard**: value is empty string, whitespace-only string (strip before check), empty array, or identical to current → skip that key silently.
 4. On success: `UPDATE state SET value = json(merged), updated_at = unixepoch() WHERE key = 'global'`
 5. Emit "State updated: N field(s) changed." to session context.
 

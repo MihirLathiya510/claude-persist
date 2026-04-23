@@ -1,8 +1,6 @@
 ---
 name: mcp-discovery
 description: Discovers available MCP servers from .mcp.json and registers them in session state
-triggers: [on-session-start, /discover-mcp, /mcp-list]
-namespace: tpl-claude-plugin:mcp-discovery
 ---
 
 ## Usage

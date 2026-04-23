@@ -1,8 +1,6 @@
 ---
 name: sqlite-schema-manager
 description: Schema versioning, migration management, and DB health inspection for plugin.db
-triggers: [/sqlite-schema, /migrate, /db-status, on-plugin-upgrade]
-namespace: tpl-claude-plugin:sqlite-schema-manager
 ---
 
 ## Usage

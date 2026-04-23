@@ -1,8 +1,6 @@
 ---
 name: anatomy-indexer
 description: Scans the repo at session start and builds PROJECT_MAP.json — a file/symbol index that eliminates redundant file reads
-triggers: [on-session-start, /anatomy-indexer, /map]
-namespace: tpl-claude-plugin:anatomy-indexer
 ---
 
 ## Usage
