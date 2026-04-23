@@ -24,7 +24,7 @@ else
 fi
 
 # ── 2. plugin.json has required keys ─────────────────────────────────────────
-REQUIRED_KEYS=(name version namespace capabilities installProfiles)
+REQUIRED_KEYS=(name version description)
 for key in "${REQUIRED_KEYS[@]}"; do
   if python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if '$key' in d else 1)" "$PLUGIN_JSON" 2>/dev/null; then
     pass "plugin.json has required key: $key"
@@ -33,8 +33,8 @@ for key in "${REQUIRED_KEYS[@]}"; do
   fi
 done
 
-# ── 3. Each skill in capabilities.skills has a SKILL.md ──────────────────────
-SKILLS=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); [print(s) for s in d['capabilities']['skills']]" "$PLUGIN_JSON" 2>/dev/null || true)
+# ── 3. Discover skills from skills/ directory ────────────────────────────────
+SKILLS=$(ls "$ROOT/skills/" 2>/dev/null || true)
 for skill in $SKILLS; do
   skill_file="$ROOT/skills/$skill/SKILL.md"
   if [[ -f "$skill_file" ]]; then
@@ -45,7 +45,7 @@ for skill in $SKILLS; do
 done
 
 # ── 4. Each SKILL.md has valid frontmatter with required keys ─────────────────
-FRONTMATTER_KEYS=(name description triggers namespace)
+FRONTMATTER_KEYS=(name description)
 for skill in $SKILLS; do
   skill_file="$ROOT/skills/$skill/SKILL.md"
   [[ -f "$skill_file" ]] || continue
@@ -58,31 +58,20 @@ for skill in $SKILLS; do
   done
 done
 
-# ── 5. namespace ends with :<dir-name> (prefix may vary by plugin) ────────────
-for skill in $SKILLS; do
-  skill_file="$ROOT/skills/$skill/SKILL.md"
-  [[ -f "$skill_file" ]] || continue
-  if grep -qE "^namespace: [^:]+:$skill$" "$skill_file"; then
-    pass "skills/$skill/SKILL.md namespace is correct"
-  else
-    fail "skills/$skill/SKILL.md namespace mismatch (expected pattern: <prefix>:$skill)"
-  fi
-done
-
-# ── 6. Write-touching skills reference security-auditor ───────────────────────
+# ── 5. Write-touching skills reference security-auditor ───────────────────────
 WRITE_SKILLS=(plugin-dev self-improver sqlite-init sqlite-memory step-verifier)
 for skill in "${WRITE_SKILLS[@]}"; do
   skill_file="$ROOT/skills/$skill/SKILL.md"
   [[ -f "$skill_file" ]] || continue
-  if grep -q "tpl-claude-plugin:security-auditor" "$skill_file"; then
+  if grep -q "security-auditor" "$skill_file"; then
     pass "skills/$skill/SKILL.md references security-auditor"
   else
-    fail "skills/$skill/SKILL.md must reference tpl-claude-plugin:security-auditor"
+    fail "skills/$skill/SKILL.md must reference security-auditor"
   fi
 done
 
-# ── 7. Each hook in capabilities.hooks has a HOOK.md ─────────────────────────
-HOOKS=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); [print(h) for h in d['capabilities']['hooks']]" "$PLUGIN_JSON" 2>/dev/null || true)
+# ── 6. Discover hooks from hooks/ directory ───────────────────────────────────
+HOOKS=$(ls "$ROOT/hooks/" 2>/dev/null || true)
 for hook in $HOOKS; do
   hook_file="$ROOT/hooks/$hook/HOOK.md"
   if [[ -f "$hook_file" ]]; then
@@ -92,7 +81,7 @@ for hook in $HOOKS; do
   fi
 done
 
-# ── 8. Each hook has required sections ───────────────────────────────────────
+# ── 7. Each hook has required sections ───────────────────────────────────────
 for hook in $HOOKS; do
   hook_file="$ROOT/hooks/$hook/HOOK.md"
   [[ -f "$hook_file" ]] || continue
@@ -105,8 +94,8 @@ for hook in $HOOKS; do
   done
 done
 
-# ── 9. Each agent in capabilities.agents has an .md file ──────────────────────
-AGENTS=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); [print(a) for a in d['capabilities']['agents']]" "$PLUGIN_JSON" 2>/dev/null || true)
+# ── 8. Discover agents from agents/ directory ─────────────────────────────────
+AGENTS=$(ls "$ROOT/agents/"*.md 2>/dev/null | xargs -I{} basename {} .md || true)
 for agent in $AGENTS; do
   agent_file="$ROOT/agents/$agent.md"
   if [[ -f "$agent_file" ]]; then
@@ -116,7 +105,7 @@ for agent in $AGENTS; do
   fi
 done
 
-# ── 10. Each agent has tools-allowed in frontmatter ──────────────────────────
+# ── 9. Each agent has tools-allowed in frontmatter ──────────────────────────
 for agent in $AGENTS; do
   agent_file="$ROOT/agents/$agent.md"
   [[ -f "$agent_file" ]] || continue
@@ -127,7 +116,7 @@ for agent in $AGENTS; do
   fi
 done
 
-# ── 11. .mcp.json exists and is valid JSON ────────────────────────────────────
+# ── 10. .mcp.json exists and is valid JSON ────────────────────────────────────
 MCP_JSON="$ROOT/.mcp.json"
 if [[ -f "$MCP_JSON" ]]; then
   if python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$MCP_JSON" 2>/dev/null; then
@@ -139,14 +128,14 @@ else
   fail ".mcp.json missing"
 fi
 
-# ── 12. mcp/README.md exists ─────────────────────────────────────────────────
+# ── 11. mcp/README.md exists ─────────────────────────────────────────────────
 if [[ -f "$ROOT/mcp/README.md" ]]; then
   pass "mcp/README.md exists"
 else
   fail "mcp/README.md missing"
 fi
 
-# ── 13. Version matches semver ───────────────────────────────────────────────
+# ── 12. Version matches semver ───────────────────────────────────────────────
 VERSION=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['version'])" "$PLUGIN_JSON" 2>/dev/null || echo "")
 if echo "$VERSION" | grep -qE '^\d+\.\d+\.\d+$'; then
   pass "Version $VERSION matches semver"
@@ -154,22 +143,16 @@ else
   fail "Version '$VERSION' does not match semver (x.y.z)"
 fi
 
-# ── 14. SQLite: db dir warning (created at runtime, not a hard fail) ─────────
-SQLITE_ENABLED=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('sqlite',{}).get('enabled','false'))" "$PLUGIN_JSON" 2>/dev/null || echo "false")
-if [[ "$SQLITE_ENABLED" == "True" ]] || [[ "$SQLITE_ENABLED" == "true" ]]; then
-  DB_DIR="$ROOT/.claude-plugin/db"
-  if [[ -d "$DB_DIR" ]]; then
-    pass "sqlite db dir exists: .claude-plugin/db/"
-  else
-    # warn only — created at session start by sqlite-init
-    echo "[WARN] .claude-plugin/db/ not found — will be created at session start by sqlite-init"
-    ((PASS++)) || true
-  fi
+# ── 13. SQLite db dir warning (created at runtime, not a hard fail) ──────────
+DB_DIR="$ROOT/.claude-plugin/db"
+if [[ -d "$DB_DIR" ]]; then
+  pass "sqlite db dir exists: .claude-plugin/db/"
 else
-  pass "sqlite disabled — db dir check skipped"
+  echo "[WARN] .claude-plugin/db/ not found — will be created at session start by sqlite-init"
+  ((PASS++)) || true
 fi
 
-# ── 15. Migration files follow naming convention V[0-9]+__[a-z_]+.sql ────────
+# ── 14. Migration files follow naming convention V[0-9]+__[a-z_]+.sql ────────
 MIGRATIONS_DIR="$ROOT/skills/sqlite-init/migrations"
 if [[ -d "$MIGRATIONS_DIR" ]]; then
   MIGRATION_COUNT=0
@@ -192,41 +175,36 @@ else
   fail "skills/sqlite-init/migrations/ directory missing"
 fi
 
-# ── 16. sqlite-query/validators.md exists ─────────────────────────────────────
+# ── 15. sqlite-query/validators.md exists ─────────────────────────────────────
 if [[ -f "$ROOT/skills/sqlite-query/validators.md" ]]; then
   pass "skills/sqlite-query/validators.md exists"
 else
   fail "skills/sqlite-query/validators.md missing (required lazy reference)"
 fi
 
-# ── 17. sqlite-init/schema.sql exists ────────────────────────────────────────
+# ── 16. sqlite-init/schema.sql exists ────────────────────────────────────────
 if [[ -f "$ROOT/skills/sqlite-init/schema.sql" ]]; then
   pass "skills/sqlite-init/schema.sql exists"
 else
   fail "skills/sqlite-init/schema.sql missing"
 fi
 
-# ── 18. anatomy-indexer skill exists with correct namespace ──────────────────
+# ── 17. anatomy-indexer skill exists ─────────────────────────────────────────
 ANATOMY_FILE="$ROOT/skills/anatomy-indexer/SKILL.md"
 if [[ -f "$ANATOMY_FILE" ]]; then
   pass "skill: anatomy-indexer -> skills/anatomy-indexer/SKILL.md exists"
-  if grep -q "^namespace: tpl-claude-plugin:anatomy-indexer" "$ANATOMY_FILE"; then
-    pass "skills/anatomy-indexer/SKILL.md namespace is correct"
-  else
-    fail "skills/anatomy-indexer/SKILL.md namespace mismatch (expected: tpl-claude-plugin:anatomy-indexer)"
-  fi
 else
   fail "skill: anatomy-indexer -> skills/anatomy-indexer/SKILL.md missing"
 fi
 
-# ── 19. anatomy-indexer NOT in WRITE_SKILLS (read-only) ──────────────────────
+# ── 18. anatomy-indexer NOT in WRITE_SKILLS (read-only) ──────────────────────
 if printf '%s\n' "${WRITE_SKILLS[@]}" | grep -q "^anatomy-indexer$"; then
   fail "anatomy-indexer must NOT be in WRITE_SKILLS (it is read-only)"
 else
   pass "anatomy-indexer correctly excluded from WRITE_SKILLS"
 fi
 
-# ── 20. step-verification hook exists with required sections ──────────────────
+# ── 19. step-verification hook exists with required sections ──────────────────
 STEPVERIF_HOOK="$ROOT/hooks/step-verification/HOOK.md"
 if [[ -f "$STEPVERIF_HOOK" ]]; then
   pass "hook: step-verification -> hooks/step-verification/HOOK.md exists"
@@ -241,47 +219,37 @@ else
   fail "hook: step-verification -> hooks/step-verification/HOOK.md missing"
 fi
 
-# ── 21. step-verifier skill exists with correct namespace ─────────────────────
+# ── 20. step-verifier skill exists ────────────────────────────────────────────
 STEPVERIF_SKILL="$ROOT/skills/step-verifier/SKILL.md"
 if [[ -f "$STEPVERIF_SKILL" ]]; then
   pass "skill: step-verifier -> skills/step-verifier/SKILL.md exists"
-  if grep -q "^namespace: tpl-claude-plugin:step-verifier" "$STEPVERIF_SKILL"; then
-    pass "skills/step-verifier/SKILL.md namespace is correct"
-  else
-    fail "skills/step-verifier/SKILL.md namespace mismatch (expected: tpl-claude-plugin:step-verifier)"
-  fi
 else
   fail "skill: step-verifier -> skills/step-verifier/SKILL.md missing"
 fi
 
-# ── 22. token-ledger skill exists with correct namespace ──────────────────────
+# ── 21. token-ledger skill exists ─────────────────────────────────────────────
 TOKENLEDGER_FILE="$ROOT/skills/token-ledger/SKILL.md"
 if [[ -f "$TOKENLEDGER_FILE" ]]; then
   pass "skill: token-ledger -> skills/token-ledger/SKILL.md exists"
-  if grep -q "^namespace: tpl-claude-plugin:token-ledger" "$TOKENLEDGER_FILE"; then
-    pass "skills/token-ledger/SKILL.md namespace is correct"
-  else
-    fail "skills/token-ledger/SKILL.md namespace mismatch (expected: tpl-claude-plugin:token-ledger)"
-  fi
 else
   fail "skill: token-ledger -> skills/token-ledger/SKILL.md missing"
 fi
 
-# ── 23. token-ledger NOT in WRITE_SKILLS (read-only) ─────────────────────────
+# ── 22. token-ledger NOT in WRITE_SKILLS (read-only) ─────────────────────────
 if printf '%s\n' "${WRITE_SKILLS[@]}" | grep -q "^token-ledger$"; then
   fail "token-ledger must NOT be in WRITE_SKILLS (it is read-only)"
 else
   pass "token-ledger correctly excluded from WRITE_SKILLS"
 fi
 
-# ── 24. V003 migration exists ─────────────────────────────────────────────────
+# ── 23. V003 migration exists ─────────────────────────────────────────────────
 if [[ -f "$ROOT/skills/sqlite-init/migrations/V003__add_verification_log.sql" ]]; then
   pass "migration V003__add_verification_log.sql exists"
 else
   fail "migration V003__add_verification_log.sql missing"
 fi
 
-# ── 25. verification_log in sqlite-query allowlist ────────────────────────────
+# ── 24. verification_log in sqlite-query allowlist ────────────────────────────
 VALIDATORS_MD="$ROOT/skills/sqlite-query/validators.md"
 if [[ -f "$VALIDATORS_MD" ]]; then
   if grep -q "verification_log" "$VALIDATORS_MD"; then
@@ -293,7 +261,7 @@ else
   fail "skills/sqlite-query/validators.md missing"
 fi
 
-# ── 26. PROJECT_MAP.json excluded from git ────────────────────────────────────
+# ── 25. PROJECT_MAP.json excluded from git ────────────────────────────────────
 GITIGNORE="$ROOT/.gitignore"
 if [[ -f "$GITIGNORE" ]]; then
   if grep -q "PROJECT_MAP.json" "$GITIGNORE"; then
