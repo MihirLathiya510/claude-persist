@@ -9,6 +9,8 @@ The single gatekeeper for the `state` table. No other skill writes to `state` di
 
 Invoked automatically at session start (to load or initialize state) and after each response (to extract and persist meaningful updates). Can also be triggered manually for inspection or reset.
 
+DB path is resolved by `sqlite-init` at session start (per-project: `~/.claude/projects/<hash>/plugin.db`).
+
 If `sqlite.enabled` is false, all operations return `null` and log a note to session state.
 
 ## Operations

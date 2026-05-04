@@ -189,7 +189,7 @@ except Exception as e:
 
 # ── 2. Migration runner ────────────────────────────────────────────────────────
 
-section("2. Migration runner (V001–V004)")
+section("2. Migration runner (V001–V005)")
 
 migration_files = sorted([f for f in os.listdir(MIGRATIONS_DIR) if f.endswith(".sql")])
 
@@ -233,10 +233,16 @@ try:
     else:
         fail("V004 missing state table")
 
-    # schema_version has all 4 migration entries (plus baseline=0)
+    # V005 — per_project_db (schema bookmark only, no new tables)
     versions = [r[0] for r in conn.execute("SELECT version FROM schema_version ORDER BY version").fetchall()]
-    if versions == [0, 1, 2, 3, 4]:
-        ok("schema_version contains all versions [0,1,2,3,4]")
+    if 5 in versions:
+        ok("V005 per_project_db bookmark applied")
+    else:
+        fail("V005 per_project_db bookmark missing", str(versions))
+
+    # schema_version has all 5 migration entries (plus baseline=0)
+    if versions == [0, 1, 2, 3, 4, 5]:
+        ok("schema_version contains all versions [0,1,2,3,4,5]")
     else:
         fail("schema_version versions unexpected", str(versions))
 
@@ -1085,8 +1091,8 @@ if 'ls "$ROOT/skills/"' in val_content:
 else:
     fail("validator should discover skills via directory scan")
 
-# Validator derives hook list from directory
-if 'ls "$ROOT/hooks/"' in val_content:
+# Validator derives hook list from directory (accepts ls or find — both are dir scans)
+if 'ls "$ROOT/hooks/"' in val_content or 'find "$ROOT/hooks"' in val_content:
     ok("validator discovers hooks via directory scan")
 else:
     fail("validator should discover hooks via directory scan")

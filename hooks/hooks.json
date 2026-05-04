@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "hooks": [
+    { "event": "session-start",     "handler": "hooks/session-start/HOOK.md" },
+    { "event": "file-write",        "handler": "hooks/file-write/HOOK.md" },
+    { "event": "commit",            "handler": "hooks/commit/HOOK.md" },
+    { "event": "tool-use",          "handler": "hooks/tool-use/HOOK.md" },
+    { "event": "step-verification", "handler": "hooks/step-verification/HOOK.md" }
+  ]
+}

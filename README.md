@@ -1,9 +1,9 @@
 <div align="center">
   <img src="logo.svg" width="88" height="88" alt="claude-persist" />
   <h1>claude-persist</h1>
-  <p><strong>Claude forgets everything when you close the tab. This plugin fixes that.</strong></p>
+  <p><strong>Claude finally remembers your project. You never have to remind it again.</strong></p>
   <p>
-    <img src="https://img.shields.io/badge/version-1.3.0-blue?style=flat-square" alt="version" />
+    <img src="https://img.shields.io/badge/version-1.4.0-blue?style=flat-square" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license" />
     <img src="https://img.shields.io/badge/tests-488%20passing-brightgreen?style=flat-square" alt="tests" />
     <img src="https://img.shields.io/badge/SQLite-3.38%2B-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="sqlite" />
@@ -51,7 +51,7 @@ Task: Debug failed webhook retry logic
 </tr>
 </table>
 
-That block is injected silently before every prompt. You never type it. Claude picks it up from natural conversation over time.
+That block is injected silently before every prompt. You never type it. Claude picks it up from natural conversation over time — and on the very first session, it auto-detects your project from `package.json` and `git log`.
 
 ---
 
@@ -65,27 +65,38 @@ claude plugin install ./
 
 That's it. No config files to edit. No API keys. No setup.
 
-On first session: claude-persist initializes its SQLite database and waits. As you work, it quietly learns your project. By session two, Claude already knows who you are and what you're building.
+On first session: claude-persist auto-detects your project name, stack, and recent focus from `package.json`, `README.md`, and `git log`. By the time you type your first message, Claude already knows who you are and what you're building.
+
+---
+
+## What's New in v1.4
+
+- **Zero-friction first-run:** Auto-bootstraps project context from `package.json` + `README.md` + `git log` on first session — no setup required
+- **Per-project DB isolation:** Each project gets its own DB at `~/.claude/projects/<hash>/plugin.db` — no cross-project bleed
+- **`/persist status` dashboard:** One command shows everything Claude knows, DB health, context size, and bootstrap status
+- **Unified `/persist` command family:** Six commands replace the scattered 15-command surface — one entry point for daily use
+- **anatomy-indexer is now opt-in:** Removed from auto session-start; only runs when you explicitly call `/persist map`
+- **Machine-readable hook registry:** `hooks/hooks.json` declares all hooks — no manual settings.json editing
 
 ---
 
 ## How it works
 
 ```
-┌─ Session opens ─────────────────────────────────────────┐
-│  1. SQLite DB initializes (or loads from last session)  │
-│  2. State row read → context block built                │
-│  3. Block injected before your first prompt             │
-└─────────────────────────────────────────────────────────┘
+┌─ Session opens ─────────────────────────────────────────────┐
+│  1. SQLite DB initializes at ~/.claude/projects/<hash>/     │
+│  2. State row read (or bootstrapped from package.json+git)  │
+│  3. Context block built and injected before your first msg  │
+└─────────────────────────────────────────────────────────────┘
          ↓
-┌─ You work normally ─────────────────────────────────────┐
-│  Claude responds with full project context              │
-│  After each turn: signals extracted, state updated      │
-└─────────────────────────────────────────────────────────┘
+┌─ You work normally ─────────────────────────────────────────┐
+│  Claude responds with full project context                  │
+│  After each turn: signals extracted, state updated          │
+└─────────────────────────────────────────────────────────────┘
          ↓
-┌─ Next session ──────────────────────────────────────────┐
-│  Picks up exactly where you left off                    │
-└─────────────────────────────────────────────────────────┘
+┌─ Next session ──────────────────────────────────────────────┐
+│  Picks up exactly where you left off                        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 **Why auto-extract instead of asking you to configure it?** Because the best memory system is one you never have to think about. If you have to run a command to save context, you won't. claude-persist listens instead.
@@ -108,66 +119,57 @@ The context block is always ≤ 10 lines and ≤ 1KB — small enough to never b
 
 ## Commands
 
-### Inspect and correct state
+### Core commands (`/persist` family)
 
 | Command | What it does |
 |---|---|
-| `/state` | See exactly what Claude currently remembers |
-| `/state-edit <patch>` | Correct or add something manually |
-| `/state-reset` | Wipe the slate and start fresh |
-| `/context-build` | Force a context block refresh |
+| `/persist status` | Hero dashboard — project context, DB path, health, bootstrap status |
+| `/persist remember <fact>` | Store a fact into project memory |
+| `/persist forget <topic>` | Clear a specific memory field |
+| `/persist log` | Recent session activity from the audit log |
+| `/persist map` | Rebuild the file and symbol index |
+| `/persist help` | Show all commands with descriptions |
 
 **See what Claude knows right now:**
 ```
-/state
+/persist status
 ```
 ```
-[claude-persist]
-Project: PayFlow
-Stack: Node.js, Stripe, Postgres
-Style: concise
----
-
-Raw state (updated 3 minutes ago):
-{ "project": { "name": "PayFlow", ... } }
+[claude-persist v1.4]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Project:   PayFlow
+Stack:     Node.js, Stripe, Postgres
+Focus:     Subscription webhook handling
+Style:     concise
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Context:   4 fields injected  (≈ 210 B of 1024 B limit)
+DB:        ~/.claude/projects/a3f8c12d9e44/plugin.db  (40 KB)
+Schema:    v5  |  Health: OK  |  Updated: 3 min ago
+Bootstrap: Auto-completed — parsed package.json + git log
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 **Fix something Claude got wrong:**
 ```
-/state-edit {"project.stack": ["Node.js", "Stripe", "Postgres", "Redis"]}
+/persist remember we use Redis for caching too
+/persist forget focus
 ```
 
-### Query project memory
+---
+
+### Advanced / power user commands
+
+These commands still work and are documented in their individual skill files:
 
 | Command | What it does |
 |---|---|
-| `/sq <query>` | Natural language or SQL against your project's memory |
-
-```
-/sq show me all decisions made in the last 3 sessions
-/sq select * from state
-```
-
-### Agent team
-
-| Command | What it does |
-|---|---|
+| `/state` | Raw state inspection with JSON |
+| `/state-edit <patch>` | Manual dot-path patch |
+| `/state-reset` | Wipe state and start fresh |
+| `/sq <query>` | Natural language or SQL against project memory |
 | `/orchestrate <task>` | Spawn Planner → Coder → Reviewer → Security → Tester pipeline |
-| `/gate <command>` | Block agent progression until a test command passes |
-
-### Code quality
-
-| Command | What it does |
-|---|---|
+| `/gate <command>` | Block agent progression until a test passes |
 | `/security-audit` | Scan staged files for hardcoded secrets |
-
-Every file write and commit is scanned automatically. This runs without being called.
-
-### Project tools
-
-| Command | What it does |
-|---|---|
-| `/map` | Rebuild the file and symbol index |
 | `/usage` | Token spend per skill this session |
 | `/db-status` | Database health check |
 | `/migrate` | Run any pending schema migrations |
@@ -179,9 +181,9 @@ Every file write and commit is scanned automatically. This runs without being ca
 
 <table>
 <tr>
-<td align="center" width="25%"><strong>Fully local</strong><br/>Everything lives in <code>.claude-plugin/db/plugin.db</code> inside your project</td>
+<td align="center" width="25%"><strong>Fully local</strong><br/>Everything lives in <code>~/.claude/projects/&lt;hash&gt;/plugin.db</code> — per-project, on your machine</td>
 <td align="center" width="25%"><strong>No cloud</strong><br/>No accounts, no API calls, no telemetry. Just SQLite on your machine</td>
-<td align="center" width="25%"><strong>Gitignored</strong><br/>The database is never committed. Your context stays private</td>
+<td align="center" width="25%"><strong>Never committed</strong><br/>The database is outside your project tree — it can't be accidentally committed</td>
 <td align="center" width="25%"><strong>Capped at 2KB</strong><br/>Claude learns what matters, not everything</td>
 </tr>
 </table>
@@ -210,17 +212,18 @@ bash tests/plugin-validator          # structural completeness check
 
 **Add a new remembered field:**
 1. Add it to the default JSON in `skills/sqlite-init/migrations/V004__add_state_table.sql`
-   (or create a `V005` migration for existing installs)
+   (or create a `V006` migration for existing installs)
 2. Add an extraction rule in `skills/state-updater/SKILL.md`
 3. Add a render mapping in `skills/context-builder/SKILL.md`
 
 **Plugin structure:**
 ```
-.claude-plugin/plugin.json   ← manifest (name, version, author)
+.claude-plugin/plugin.json   ← manifest (name, version, author, hooks pointer)
+hooks/hooks.json             ← machine-readable hook registry
 skills/                      ← slash commands (one folder = one command)
 hooks/                       ← lifecycle events (session-start, file-write, commit)
 agents/                      ← Planner, Coder, Reviewer, Security, Tester
 skills/sqlite-init/
   schema.sql                 ← baseline DB schema
-  migrations/                ← versioned migrations (V001–V004)
+  migrations/                ← versioned migrations (V001–V005)
 ```

@@ -70,8 +70,8 @@ for skill in "${WRITE_SKILLS[@]}"; do
   fi
 done
 
-# ── 6. Discover hooks from hooks/ directory ───────────────────────────────────
-HOOKS=$(ls "$ROOT/hooks/" 2>/dev/null || true)
+# ── 6. Discover hooks from hooks/ directory (dirs only — skip hooks.json registry) ──
+HOOKS=$(find "$ROOT/hooks" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; 2>/dev/null | sort || true)
 for hook in $HOOKS; do
   hook_file="$ROOT/hooks/$hook/HOOK.md"
   if [[ -f "$hook_file" ]]; then
@@ -143,13 +143,15 @@ else
   fail "Version '$VERSION' does not match semver (x.y.z)"
 fi
 
-# ── 13. SQLite db dir warning (created at runtime, not a hard fail) ──────────
+# ── 13. SQLite db dir — per-project path (created at runtime, not a hard fail) ──
+# v1.4+: DB lives at ~/.claude/projects/<hash>/plugin.db — not inside the project tree.
+# The legacy .claude-plugin/db/ path is cleaned up automatically on first v1.4 session start.
 DB_DIR="$ROOT/.claude-plugin/db"
 if [[ -d "$DB_DIR" ]]; then
-  pass "sqlite db dir exists: .claude-plugin/db/"
-else
-  echo "[WARN] .claude-plugin/db/ not found — will be created at session start by sqlite-init"
+  echo "[WARN] .claude-plugin/db/ still present — will be migrated to ~/.claude/projects/<hash>/ on next session start"
   ((PASS++)) || true
+else
+  pass "sqlite db dir not in project tree (per-project path: ~/.claude/projects/<hash>/plugin.db)"
 fi
 
 # ── 14. Migration files follow naming convention V[0-9]+__[a-z_]+.sql ────────

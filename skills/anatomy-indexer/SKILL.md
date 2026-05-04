@@ -1,11 +1,11 @@
 ---
 name: anatomy-indexer
-description: Scans the repo at session start and builds PROJECT_MAP.json — a file/symbol index that eliminates redundant file reads
+description: Scans the repo on demand and builds PROJECT_MAP.json — a file/symbol index that eliminates redundant file reads
 ---
 
 ## Usage
 
-Runs automatically via `hooks/session-start/HOOK.md` after sqlite-init. Can be re-triggered manually with `/anatomy-indexer` or `/map` to refresh after large file changes.
+Runs on explicit `/persist map` call only (via the `persist` skill command router). Does not run automatically at session start — it is opt-in and non-intrusive.
 
 Agents query `PROJECT_MAP.json` before opening any file. If the symbol they need is indexed, they skip the read entirely — solving the 71% redundant read problem.
 
@@ -18,7 +18,7 @@ Agents query `PROJECT_MAP.json` before opening any file. If the symbol they need
    - Extract top-level symbols: functions, classes, exports, interfaces, constants. Include name, type, and line number.
 4. Build the PROJECT_MAP structure (see Output Schema).
 5. Write to `.claude-plugin/PROJECT_MAP.json` atomically (write to `.tmp` then rename).
-6. Emit session notification: "Anatomy index built: N files, M symbols. Use /map to refresh."
+6. Emit: "Anatomy index built: N files, M symbols. Use /persist map to refresh."
 
 ## Output Schema
 
@@ -57,22 +57,22 @@ If a file's `mtime` in PROJECT_MAP is older than its actual mtime on disk, the i
 
 ## Decision Rule
 
-- `/map` → always re-scan fully (e.g. after adding many files)
-- `on-session-start` → scan only if PROJECT_MAP is absent or > 1 hour old
-- If scan fails for a file → skip it, log to session state, continue (never block session)
+- `/persist map` → always re-scan fully (e.g. after adding many files)
+- If scan fails for a file → skip it, log to session state, continue (never block)
 
 ## Examples
 
 ```
-[session-start] Invoking tpl-claude-plugin:anatomy-indexer...
+/persist map
+> Scanning repo...
 > Anatomy index built: 47 files, 389 symbols.
 > .claude-plugin/PROJECT_MAP.json written.
 
-/map
+/persist map
 > Re-scanning repo...
 > Anatomy index refreshed: 49 files (+2), 401 symbols (+12).
 ```
 
 <!-- References (lazy) -->
 - `.claude-plugin/PROJECT_MAP.json`
-- `hooks/session-start/HOOK.md`
+- `skills/persist/SKILL.md`

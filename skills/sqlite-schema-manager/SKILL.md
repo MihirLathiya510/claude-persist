@@ -42,9 +42,10 @@ Provides four commands for inspecting and evolving the database schema. All dest
 
 ```
 /db-status
-> Schema version: 4 (applied 2026-04-20)
+> Schema version: 5 (applied 2026-05-04)
+> DB: ~/.claude/projects/a3f8c12d9e44/plugin.db
 > Tables: decisions(0), tasks(0), messages(0), audit_log(0), usage_stats(0), toggle_history(0), verification_log(0), state(1)
-> DB size: 40 KB | WAL: enabled | Backup: 2026-04-20 10:22:01
+> DB size: 40 KB | WAL: enabled | Backup: 2026-05-04 10:22:01
 > Pending migrations: 0
 
 /sqlite-schema show decisions

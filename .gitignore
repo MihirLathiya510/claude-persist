@@ -1,10 +1,11 @@
-# SQLite database files — never commit the live DB
+# SQLite database — stored per-project at ~/.claude/projects/<hash>/plugin.db (never in the repo)
+# Legacy path (pre-v1.4): .claude-plugin/db/ — auto-cleaned on first v1.4 session start
 .claude-plugin/db/
 
 # Pre-migration backup
 .claude-plugin/db/*.bak
 
-# Anatomy indexer output — generated at session start
+# Anatomy indexer output — generated on demand via /persist map
 .claude-plugin/PROJECT_MAP.json
 
 # Token ledger reports — generated on demand
